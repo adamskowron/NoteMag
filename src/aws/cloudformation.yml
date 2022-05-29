@@ -28,6 +28,8 @@ Parameters:
 
 Resources:
 
+  ### API GATEWAY ###
+
   ApiGatewayRestApi:
     Type: AWS::ApiGateway::RestApi
     Properties:
@@ -111,6 +113,8 @@ Resources:
                 Action: 'lambda:*'
                 Resource: !GetAtt UploadLambda.Arn
 
+  ### UPLOAD IMAGES LAMBDA ###
+
   UploadLambda:
     Type: AWS::Serverless::Function
     Properties:
@@ -122,33 +126,14 @@ Resources:
       Role: !GetAtt ProcessingLambdaExecutionRole.Arn
       Timeout: 60
 
-#  LambdaInvokePermission:
-#    Type: 'AWS::Lambda::Permission'
-#    Properties:
-#      FunctionName: !GetAtt UploadLambda.Arn
-#      Action: 'lambda:InvokeFunction'
-#      Principal: s3.amazonaws.com
-#      SourceAccount: !Ref 'AWS::AccountId'
-#      SourceArn: !Sub 'arn:aws:s3:::lambda-handlers-codes'
-
   UploadLambdaPermission:
-    Type: 'AWS::Lambda::Permission'
+    Type: AWS::Lambda::Permission
     Properties:
-      FunctionName: !GetAtt UploadLambda.Arn
       Action: 'lambda:InvokeFunction'
+      FunctionName: !Ref UploadImageLambda
       Principal: s3.amazonaws.com
-      SourceAccount: !Ref 'AWS::AccountId'
       SourceArn: !Sub 'arn:aws:s3:::images-s3'
-
-#  UploadLambdaPermission:
-#    Type: AWS::Lambda::Permission
-#    Properties:
-#      Action: 'lambda:InvokeFunction'
-#      FunctionName: !Ref UploadLambda
-#      Principal: s3.amazonaws.com
-#      SourceArn: arn:aws:s3:::images-s3
-#      SourceAccount: !Ref AWS::AccountId
-
+      SourceAccount: !Ref AWS::AccountId
 
   ProcessingLambdaExecutionRole:
     Type: AWS::IAM::Role
@@ -180,6 +165,76 @@ Resources:
                   - '*'
                 Resource: arn:aws:s3:::images-s3/*
 
+  ### EXTRACT TEXT FROM IMAGES LAMBDA ###
+
+  ProcessImageLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: ProcessImageLambda
+      Handler: GetTextLambda::handleRequest
+      Runtime: java11
+      CodeUri: ../../target/notemag.zip
+      MemorySize: 256
+      Role: !GetAtt ProcessImageLambdaIAMRole.Arn
+      Timeout: 60
+
+  ProcessImageLambdaPermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: !GetAtt ProcessImageLambda.Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !Sub 'arn:aws:s3:::images-s3'
+
+  ProcessImageLambdaIAMRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:GetBucketNotification'
+                  - 's3:PutBucketNotification'
+                Resource: !Sub 'arn:aws:s3:::images-s3'
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
+        - PolicyName: allowLogging
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:*
+                Resource: arn:aws:logs:*:*:*
+        - PolicyName: getAndDeleteObjects
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:DeleteObject
+                Resource:  !Sub 'arn:aws:s3:::images-s3/*'
+
+  ### S3 BUCKET FOR IMAGES STORING ###
+
   ImagesBucket:
     Type: AWS::S3::Bucket
     DependsOn:
@@ -189,43 +244,9 @@ Resources:
       NotificationConfiguration:
         LambdaConfigurations:
           - Event: s3:ObjectCreated:*
-            Function: !GetAtt UploadLambda.Arn
-            Filter:
-              S3Key:
-                Rules:
-                  - Name: suffix
-                    Value: .txt
-
-
-
-#    ProcessingLambdaExecutionRole: #IAM dla lambdy
-#      Type: AWS::IAM::Role
-#      Properties:
-#        AssumeRolePolicyDocument:
-#          Version: '2012-10-17'
-#          Statement:
-#            - Effect: Allow
-#              Principal:
-#                Service:
-#                  - lambda.amazonaws.com
-#              Action:
-#                - sts:AssumeRole
-#        Policies:
-#          - PolicyName: allowLogging
-#            PolicyDocument:
-#              Version: '2012-10-17'
-#              Statement:
-#                - Effect: Allow
-#                  Action:
-#                    - logs:*
-#                  Resource: arn:aws:logs:*:*:*
-#          - PolicyName: getAndDeleteObjects
-#            PolicyDocument:
-#              Version: '2012-10-17'
-#              Statement:
-#                - Effect: Allow
-#                  Action:
-#                    - s3:GetObject
-#                    - s3:DeleteObject
-#                  Resource: !Sub 'arn:aws:s3:::images-s3/*'
-
+            Function: !GetAtt ProcessImageLambda.Arn
+#            Filter:
+#              S3Key:
+#                Rules:
+#                  - Name: suffix
+#                    Value: .txt

@@ -120,7 +120,7 @@ Resources:
       FunctionName: UploadImageLambda
       Handler: AddLambdaHandler::handleRequest
       Runtime: java11
-      CodeUri: s3://lambda-handlers-codes/f764a1371c2b4cd0136f7205905b8cb9
+      CodeUri: s3://lambda-handlers-codes/e9359ef0e27a3423bc36c534a2f5b8f8
       MemorySize: 256
       Role:
         Fn::GetAtt:
@@ -130,16 +130,14 @@ Resources:
   UploadLambdaPermission:
     Type: AWS::Lambda::Permission
     Properties:
-      FunctionName:
-        Fn::GetAtt:
-        - UploadLambda
-        - Arn
       Action: lambda:InvokeFunction
+      FunctionName:
+        Ref: UploadImageLambda
       Principal: s3.amazonaws.com
-      SourceAccount:
-        Ref: AWS::AccountId
       SourceArn:
         Fn::Sub: arn:aws:s3:::images-s3
+      SourceAccount:
+        Ref: AWS::AccountId
   ProcessingLambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -169,6 +167,79 @@ Resources:
             Action:
             - '*'
             Resource: arn:aws:s3:::images-s3/*
+  ProcessImageLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: ProcessImageLambda
+      Handler: GetTextLambda::handleRequest
+      Runtime: java11
+      CodeUri: s3://lambda-handlers-codes/e9359ef0e27a3423bc36c534a2f5b8f8
+      MemorySize: 256
+      Role:
+        Fn::GetAtt:
+        - ProcessImageLambdaIAMRole
+        - Arn
+      Timeout: 60
+  ProcessImageLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Fn::GetAtt:
+        - ProcessImageLambda
+        - Arn
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceAccount:
+        Ref: AWS::AccountId
+      SourceArn:
+        Fn::Sub: arn:aws:s3:::images-s3
+  ProcessImageLambdaIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - s3:GetBucketNotification
+            - s3:PutBucketNotification
+            Resource:
+              Fn::Sub: arn:aws:s3:::images-s3
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+      - PolicyName: allowLogging
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:*
+            Resource: arn:aws:logs:*:*:*
+      - PolicyName: getAndDeleteObjects
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - s3:GetObject
+            - s3:DeleteObject
+            Resource:
+              Fn::Sub: arn:aws:s3:::images-s3/*
   ImagesBucket:
     Type: AWS::S3::Bucket
     DependsOn:
@@ -180,10 +251,5 @@ Resources:
         - Event: s3:ObjectCreated:*
           Function:
             Fn::GetAtt:
-            - UploadLambda
+            - ProcessImageLambda
             - Arn
-          Filter:
-            S3Key:
-              Rules:
-              - Name: suffix
-                Value: .txt

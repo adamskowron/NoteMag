@@ -32,13 +32,10 @@ public class AddLambdaHandler implements RequestStreamHandler {
             InputStream bodyInputStream = new ByteArrayInputStream(addLambdaRequest.getBody());
             String mimeType = URLConnection.guessContentTypeFromStream(bodyInputStream);
             bodyInputStream.close();
-            //...close stream
 
             if(mimeType.toLowerCase().equals("image/jpeg") || mimeType.toLowerCase().equals("image/png"))
             {
                 logger.log("REQUEST VALID");
-
-
                 logger.log("GOT IMAGE: " + addLambdaRequest.getBody().toString());
 
                 S3Client s3Client = S3Client.builder().region(Region.EU_WEST_1)
