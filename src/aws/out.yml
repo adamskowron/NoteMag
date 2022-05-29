@@ -12,7 +12,7 @@ Parameters:
   addLambdaFunctionName:
     Type: String
     AllowedPattern: '[a-zA-Z0-9]+[a-zA-Z0-9-]+[a-zA-Z0-9]+'
-    Default: uploadImageLambda
+    Default: UploadLambda
   getLambdaFunctionName:
     Type: String
     AllowedPattern: '[a-zA-Z0-9]+[a-zA-Z0-9-]+[a-zA-Z0-9]+'
@@ -26,6 +26,8 @@ Resources:
     Type: AWS::ApiGateway::RestApi
     Properties:
       ApiKeySourceType: HEADER
+      BinaryMediaTypes:
+      - '*/*'
       Description: An API Gateway with a Lambda Integration
       EndpointConfiguration:
         Types:
@@ -41,7 +43,7 @@ Resources:
       PathPart: lambda
       RestApiId:
         Ref: ApiGatewayRestApi
-  ApiGatewayMethod:
+  ApiGatewayMethodGetter:
     Type: AWS::ApiGateway::Method
     Properties:
       ApiKeyRequired: false
@@ -58,30 +60,7 @@ Resources:
         TimeoutInMillis: 29000
         Type: AWS_PROXY
         Uri:
-          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaFunction.Arn}/invocations
-      OperationName: lambda
-      ResourceId:
-        Ref: ApiGatewayResource
-      RestApiId:
-        Ref: ApiGatewayRestApi
-  ApiGatewayMethodGetter:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      ApiKeyRequired: false
-      AuthorizationType: NONE
-      HttpMethod: GET
-      Integration:
-        ConnectionType: INTERNET
-        Credentials:
-          Fn::GetAtt:
-          - ApiGatewayIamRole
-          - Arn
-        IntegrationHttpMethod: POST
-        PassthroughBehavior: WHEN_NO_MATCH
-        TimeoutInMillis: 29000
-        Type: AWS_PROXY
-        Uri:
-          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaFunctionForGett.Arn}/invocations
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UploadLambda.Arn}/invocations
       OperationName: lambda
       ResourceId:
         Ref: ApiGatewayResource
@@ -105,7 +84,7 @@ Resources:
       StageName: v0
   ApiGatewayDeployment:
     Type: AWS::ApiGateway::Deployment
-    DependsOn: ApiGatewayMethod
+    DependsOn: ApiGatewayMethodGetter
     Properties:
       Description: Lambda API Deployment
       RestApiId:
@@ -125,16 +104,6 @@ Resources:
           - sts:AssumeRole
       Path: /
       Policies:
-      - PolicyName: LambdaAccess
-        PolicyDocument:
-          Version: '2012-10-17'
-          Statement:
-          - Effect: Allow
-            Action: lambda:*
-            Resource:
-              Fn::GetAtt:
-              - LambdaFunction
-              - Arn
       - PolicyName: LambdaAccessGet
         PolicyDocument:
           Version: '2012-10-17'
@@ -143,35 +112,35 @@ Resources:
             Action: lambda:*
             Resource:
               Fn::GetAtt:
-              - LambdaFunctionForGett
+              - UploadLambda
               - Arn
-  LambdaFunction:
-    Type: AWS::Lambda::Function
+  UploadLambda:
+    Type: AWS::Serverless::Function
     Properties:
-      Code:
-        ZipFile: "def handler(event, context):\n  response = {\n    'isBase64Encoded':\
-          \ False,\n    'statusCode': 200,\n    'headers': {},\n    'multiValueHeaders':\
-          \ {},\n    'body': 'Hello, HELL!'\n  }\n  return response\n"
-      Description: AWS Lambda function
-      FunctionName: lambda-function
-      Handler: index.handler
+      FunctionName: UploadImageLambda
+      Handler: AddLambdaHandler::handleRequest
+      Runtime: java11
+      CodeUri: s3://lambda-handlers-codes/3f2f11bb2ee746149b0e7632606254e7
       MemorySize: 256
       Role:
         Fn::GetAtt:
-        - LambdaIamRole
+        - ProcessingLambdaExecutionRole
         - Arn
-      Runtime: python3.7
       Timeout: 60
-  LambdaFunctionForGett:
-    Type: AWS::Serverless::Function
+  LambdaInvokePermission:
+    Type: AWS::Lambda::Permission
     Properties:
-      FunctionName: lambda-functionGET
-      Handler: AddLambdaHandler::handleRequest
-      Runtime: java11
-      CodeUri: s3://lambda-handlers-codes/f785e31a0b04c42fa175165bed0f89c4
-      MemorySize: 256
-      Timeout: 60
-  LambdaIamRole:
+      FunctionName:
+        Fn::GetAtt:
+        - UploadLambda
+        - Arn
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceAccount:
+        Ref: AWS::AccountId
+      SourceArn:
+        Fn::Sub: arn:aws:s3:::lambda-handlers-codes
+  ProcessingLambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -183,17 +152,20 @@ Resources:
             - lambda.amazonaws.com
           Action:
           - sts:AssumeRole
-      Path: /
-  LambdaIamRoleGet:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-        - Effect: Allow
-          Principal:
-            Service:
-            - lambda.amazonaws.com
-          Action:
-          - sts:AssumeRole
-      Path: /
+      Policies:
+      - PolicyName: allowLogging
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:*
+            Resource: arn:aws:logs:*:*:*
+      - PolicyName: getAndDeleteObjects
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - '*'
+            Resource: arn:aws:s3:::lambda-handlers-codes/*

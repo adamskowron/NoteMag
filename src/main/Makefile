@@ -1,3 +1,0 @@
-aws cloudformation package --template-file cloudformation.yml --s3-bucket lambda-handlers-codes --output-template-file out.yml
-
-aws cloudformation deploy --template-file magProject\src\aws\out.yml --stack-name LambdaBeta --capabilities CAPABILITY_IAM
