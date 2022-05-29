@@ -117,10 +117,10 @@ Resources:
   UploadLambda:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: UploadImageLambda
+      FunctionName: UploadLambda
       Handler: AddLambdaHandler::handleRequest
       Runtime: java11
-      CodeUri: s3://lambda-handlers-codes/e9359ef0e27a3423bc36c534a2f5b8f8
+      CodeUri: s3://lambda-handlers-codes/cf9556e03d52e83f157066dfb98b2fb6
       MemorySize: 256
       Role:
         Fn::GetAtt:
@@ -132,7 +132,7 @@ Resources:
     Properties:
       Action: lambda:InvokeFunction
       FunctionName:
-        Ref: UploadImageLambda
+        Ref: UploadLambda
       Principal: s3.amazonaws.com
       SourceArn:
         Fn::Sub: arn:aws:s3:::images-s3
@@ -173,7 +173,7 @@ Resources:
       FunctionName: ProcessImageLambda
       Handler: GetTextLambda::handleRequest
       Runtime: java11
-      CodeUri: s3://lambda-handlers-codes/e9359ef0e27a3423bc36c534a2f5b8f8
+      CodeUri: s3://lambda-handlers-codes/cf9556e03d52e83f157066dfb98b2fb6
       MemorySize: 256
       Role:
         Fn::GetAtt:
@@ -240,6 +240,15 @@ Resources:
             - s3:DeleteObject
             Resource:
               Fn::Sub: arn:aws:s3:::images-s3/*
+      - PolicyName: rekognitionText
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - rekognition:DetectText
+            - rekognition:GetTextDetection
+            Resource: '*'
   ImagesBucket:
     Type: AWS::S3::Bucket
     DependsOn:
@@ -253,3 +262,23 @@ Resources:
             Fn::GetAtt:
             - ProcessImageLambda
             - Arn
+  DDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+      - AttributeName: UserId
+        AttributeType: S
+      - AttributeName: ImageName
+        AttributeType: S
+      - AttributeName: S3Key
+        AttributeType: S
+      - AttributeName: Text
+        AttributeType: S
+      KeySchema:
+      - AttributeName: UserId
+        KeyType: HASH
+      - AttributeName: ImageName
+        KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5

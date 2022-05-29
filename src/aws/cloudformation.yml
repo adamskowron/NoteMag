@@ -118,7 +118,7 @@ Resources:
   UploadLambda:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: UploadImageLambda
+      FunctionName: UploadLambda
       Handler: AddLambdaHandler::handleRequest
       Runtime: java11
       CodeUri: ../../target/notemag.zip
@@ -130,7 +130,7 @@ Resources:
     Type: AWS::Lambda::Permission
     Properties:
       Action: 'lambda:InvokeFunction'
-      FunctionName: !Ref UploadImageLambda
+      FunctionName: !Ref UploadLambda
       Principal: s3.amazonaws.com
       SourceArn: !Sub 'arn:aws:s3:::images-s3'
       SourceAccount: !Ref AWS::AccountId
@@ -232,6 +232,15 @@ Resources:
                   - s3:GetObject
                   - s3:DeleteObject
                 Resource:  !Sub 'arn:aws:s3:::images-s3/*'
+        - PolicyName: rekognitionText
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - rekognition:DetectText
+                  - rekognition:GetTextDetection
+                Resource: '*'
 
   ### S3 BUCKET FOR IMAGES STORING ###
 
@@ -250,3 +259,91 @@ Resources:
 #                Rules:
 #                  - Name: suffix
 #                    Value: .txt
+
+  ### DynamoDB ###
+
+  DDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        -
+          AttributeName: "UserId"
+          AttributeType: "S"
+        -
+          AttributeName: "ImageName"
+          AttributeType: "S"
+        -
+          AttributeName: "S3Key"
+          AttributeType: "S"
+        -
+          AttributeName: "Text"
+          AttributeType: "S"
+      KeySchema:
+        -
+          AttributeName: "UserId"
+          KeyType: "HASH"
+        -
+          AttributeName: "ImageName"
+          KeyType: "RANGE"
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+
+#  WriteCapacityScalableTarget:
+#    Type: AWS::ApplicationAutoScaling::ScalableTarget
+#    Properties:
+#      MaxCapacity: 15
+#      MinCapacity: 5
+#      ResourceId: !Join
+#        - /
+#        - - table
+#          - !Ref DDBTable
+#      RoleARN: !GetAtt ScalingRole.Arn
+#      ScalableDimension: dynamodb:table:WriteCapacityUnits
+#      ServiceNamespace: dynamodb
+#  ScalingRole:
+#    Type: AWS::IAM::Role
+#    Properties:
+#      AssumeRolePolicyDocument:
+#        Version: "2012-10-17"
+#        Statement:
+#          -
+#            Effect: "Allow"
+#            Principal:
+#              Service:
+#                - application-autoscaling.amazonaws.com
+#            Action:
+#              - "sts:AssumeRole"
+#      Path: "/"
+#      Policies:
+#        -
+#          PolicyName: "root"
+#          PolicyDocument:
+#            Version: "2012-10-17"
+#            Statement:
+#              -
+#                Effect: "Allow"
+#                Action:
+#                  - "dynamodb:DescribeTable"
+#                  - "dynamodb:UpdateTable"
+#                  - "cloudwatch:PutMetricAlarm"
+#                  - "cloudwatch:DescribeAlarms"
+#                  - "cloudwatch:GetMetricStatistics"
+#                  - "cloudwatch:SetAlarmState"
+#                  - "cloudwatch:DeleteAlarms"
+#                Resource: "*"
+#
+#
+#  WriteScalingPolicy:
+#    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+#    Properties:
+#      PolicyName: WriteAutoScalingPolicy
+#      PolicyType: TargetTrackingScaling
+#      ScalingTargetId: !Ref WriteCapacityScalableTarget
+#      TargetTrackingScalingPolicyConfiguration:
+#        TargetValue: 50.0
+#        ScaleInCooldown: 60
+#        ScaleOutCooldown: 60
+#        PredefinedMetricSpecification:
+#          PredefinedMetricType: DynamoDBWriteCapacityUtilization

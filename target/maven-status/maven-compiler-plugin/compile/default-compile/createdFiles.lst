@@ -1,5 +1,7 @@
-model\AddLambdaResponse$AddLambdaResponseBuilder.class
-model\AddLambdaResponse.class
+model\LambdaResponse$LambdaResponseBuilder.class
+model\LambdaRequest.class
 GetTextLambda.class
-model\AddLambdaRequest.class
+model\LambdaResponse.class
+model\Record.class
 AddLambdaHandler.class
+model\S3Event.class
