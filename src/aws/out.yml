@@ -120,14 +120,14 @@ Resources:
       FunctionName: UploadImageLambda
       Handler: AddLambdaHandler::handleRequest
       Runtime: java11
-      CodeUri: s3://lambda-handlers-codes/3f2f11bb2ee746149b0e7632606254e7
+      CodeUri: s3://lambda-handlers-codes/f764a1371c2b4cd0136f7205905b8cb9
       MemorySize: 256
       Role:
         Fn::GetAtt:
         - ProcessingLambdaExecutionRole
         - Arn
       Timeout: 60
-  LambdaInvokePermission:
+  UploadLambdaPermission:
     Type: AWS::Lambda::Permission
     Properties:
       FunctionName:
@@ -139,7 +139,7 @@ Resources:
       SourceAccount:
         Ref: AWS::AccountId
       SourceArn:
-        Fn::Sub: arn:aws:s3:::lambda-handlers-codes
+        Fn::Sub: arn:aws:s3:::images-s3
   ProcessingLambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -168,4 +168,22 @@ Resources:
           - Effect: Allow
             Action:
             - '*'
-            Resource: arn:aws:s3:::lambda-handlers-codes/*
+            Resource: arn:aws:s3:::images-s3/*
+  ImagesBucket:
+    Type: AWS::S3::Bucket
+    DependsOn:
+    - UploadLambdaPermission
+    Properties:
+      BucketName: images-s3
+      NotificationConfiguration:
+        LambdaConfigurations:
+        - Event: s3:ObjectCreated:*
+          Function:
+            Fn::GetAtt:
+            - UploadLambda
+            - Arn
+          Filter:
+            S3Key:
+              Rules:
+              - Name: suffix
+                Value: .txt

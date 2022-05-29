@@ -114,10 +114,6 @@ Resources:
   UploadLambda:
     Type: AWS::Serverless::Function
     Properties:
-#      Code:
-#        S3Bucket: lambda-handlers-codes
-#        S3Key: magProject.zip
-#      Description: AWS Lambda function
       FunctionName: UploadImageLambda
       Handler: AddLambdaHandler::handleRequest
       Runtime: java11
@@ -126,14 +122,32 @@ Resources:
       Role: !GetAtt ProcessingLambdaExecutionRole.Arn
       Timeout: 60
 
-  LambdaInvokePermission:
+#  LambdaInvokePermission:
+#    Type: 'AWS::Lambda::Permission'
+#    Properties:
+#      FunctionName: !GetAtt UploadLambda.Arn
+#      Action: 'lambda:InvokeFunction'
+#      Principal: s3.amazonaws.com
+#      SourceAccount: !Ref 'AWS::AccountId'
+#      SourceArn: !Sub 'arn:aws:s3:::lambda-handlers-codes'
+
+  UploadLambdaPermission:
     Type: 'AWS::Lambda::Permission'
     Properties:
       FunctionName: !GetAtt UploadLambda.Arn
       Action: 'lambda:InvokeFunction'
       Principal: s3.amazonaws.com
       SourceAccount: !Ref 'AWS::AccountId'
-      SourceArn: !Sub 'arn:aws:s3:::lambda-handlers-codes'
+      SourceArn: !Sub 'arn:aws:s3:::images-s3'
+
+#  UploadLambdaPermission:
+#    Type: AWS::Lambda::Permission
+#    Properties:
+#      Action: 'lambda:InvokeFunction'
+#      FunctionName: !Ref UploadLambda
+#      Principal: s3.amazonaws.com
+#      SourceArn: arn:aws:s3:::images-s3
+#      SourceAccount: !Ref AWS::AccountId
 
 
   ProcessingLambdaExecutionRole:
@@ -164,14 +178,14 @@ Resources:
               - Effect: Allow
                 Action:
                   - '*'
-                Resource: arn:aws:s3:::lambda-handlers-codes/*
+                Resource: arn:aws:s3:::images-s3/*
 
   ImagesBucket:
     Type: AWS::S3::Bucket
     DependsOn:
       - UploadLambdaPermission
     Properties:
-      BucketName: images-buckett
+      BucketName: images-s3
       NotificationConfiguration:
         LambdaConfigurations:
           - Event: s3:ObjectCreated:*
@@ -182,14 +196,7 @@ Resources:
                   - Name: suffix
                     Value: .txt
 
-#  UploadLambdaPermission:
-#    Type: AWS::Lambda::Permission
-#    Properties:
-#      Action: 'lambda:InvokeFunction'
-#      FunctionName: !Ref UploadLambda
-#      Principal: s3.amazonaws.com
-#      SourceArn: !Sub 'arn:aws:s3:::images-buckett'
-#      SourceAccount: !Ref AWS::AccountId
+
 
 #    ProcessingLambdaExecutionRole: #IAM dla lambdy
 #      Type: AWS::IAM::Role
@@ -220,5 +227,5 @@ Resources:
 #                  Action:
 #                    - s3:GetObject
 #                    - s3:DeleteObject
-#                  Resource: !Sub 'arn:aws:s3:::images-bucket/*'
+#                  Resource: !Sub 'arn:aws:s3:::images-s3/*'
 

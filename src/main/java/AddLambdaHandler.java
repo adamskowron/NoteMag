@@ -34,7 +34,7 @@ public class AddLambdaHandler implements RequestStreamHandler {
             bodyInputStream.close();
             //...close stream
 
-            if(mimeType.toLowerCase().equals("jpg") || mimeType.toLowerCase().equals("png"))
+            if(mimeType.toLowerCase().equals("image/jpeg") || mimeType.toLowerCase().equals("image/png"))
             {
                 logger.log("REQUEST VALID");
 
@@ -46,8 +46,8 @@ public class AddLambdaHandler implements RequestStreamHandler {
                         .build();
 
                 PutObjectResponse sa = s3Client.putObject(PutObjectRequest.builder()
-                                .bucket("lambda-handlers-codes")
-                                .key("TESTdIr/img1").build(),
+                                .bucket("images-s3")
+                                .key("USER1FOLDER/imgNAME1").build(),
                         RequestBody.fromBytes(addLambdaRequest.getBody()));
 
                 AddLambdaResponse addLambdaResponse = AddLambdaResponse.builder()
@@ -61,7 +61,7 @@ public class AddLambdaHandler implements RequestStreamHandler {
                 writer.close();
 
             } else {
-                logger.log("GOT WRONG FILE FORMAT");
+                logger.log("GOT WRONG FILE FORMAT: " + mimeType);
                 OutputStreamWriter writer = new OutputStreamWriter(outputStream, "UTF-8");
                 writer.write(mapper.writer().withDefaultPrettyPrinter().writeValueAsString("WRONG FILE FORMAT"));
                 writer.close();
