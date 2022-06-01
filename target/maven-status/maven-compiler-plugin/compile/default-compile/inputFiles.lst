@@ -1,4 +1,6 @@
 C:\Users\Adam\Desktop\magProject\src\main\java\GetTextLambda.java
-C:\Users\Adam\Desktop\magProject\src\main\java\model\AddLambdaResponse.java
-C:\Users\Adam\Desktop\magProject\src\main\java\model\AddLambdaRequest.java
+C:\Users\Adam\Desktop\magProject\src\main\java\model\LambdaRequest.java
+C:\Users\Adam\Desktop\magProject\src\main\java\model\Record.java
+C:\Users\Adam\Desktop\magProject\src\main\java\model\S3Event.java
+C:\Users\Adam\Desktop\magProject\src\main\java\model\LambdaResponse.java
 C:\Users\Adam\Desktop\magProject\src\main\java\AddLambdaHandler.java

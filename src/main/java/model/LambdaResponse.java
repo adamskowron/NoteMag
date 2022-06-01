@@ -17,7 +17,7 @@ public class LambdaResponse {
     int statusCode;
 
 //    @JsonProperty
-//    Map<String, String> headers;
+//    private Map<String,List<String>> headers;
 
     @JsonProperty
     String body;

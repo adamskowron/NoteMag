@@ -120,7 +120,7 @@ Resources:
       FunctionName: UploadLambda
       Handler: AddLambdaHandler::handleRequest
       Runtime: java11
-      CodeUri: s3://lambda-handlers-codes/cf9556e03d52e83f157066dfb98b2fb6
+      CodeUri: s3://lambda-handlers-codes/84843d5f02fd4f931b720516375d8b75
       MemorySize: 256
       Role:
         Fn::GetAtt:
@@ -173,7 +173,7 @@ Resources:
       FunctionName: ProcessImageLambda
       Handler: GetTextLambda::handleRequest
       Runtime: java11
-      CodeUri: s3://lambda-handlers-codes/cf9556e03d52e83f157066dfb98b2fb6
+      CodeUri: s3://lambda-handlers-codes/84843d5f02fd4f931b720516375d8b75
       MemorySize: 256
       Role:
         Fn::GetAtt:

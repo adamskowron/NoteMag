@@ -1,20 +1,24 @@
 package model;
 
 import com.fasterxml.jackson.annotation.*;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.extern.jackson.Jacksonized;
 
-import java.util.List;
+import java.util.*;
 
 @ToString
+@Builder
 @Getter
 @Setter
+@Jacksonized
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class LambdaRequest {
 
-//    @JsonProperty
-//    private List<String> headers;
+    @JsonProperty
+    private Map<String, ArrayList<String>> headers;
 
     @JsonProperty
     private boolean isBase64Encoded;
@@ -22,6 +26,6 @@ public class LambdaRequest {
     @JsonProperty
     private byte[] body;
 
-//    @JsonIgnore
+//    @JsonProperty
 //    private List<String> requestContext;
 }
