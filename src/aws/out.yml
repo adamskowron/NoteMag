@@ -120,7 +120,7 @@ Resources:
       FunctionName: UploadLambda
       Handler: AddLambdaHandler::handleRequest
       Runtime: java11
-      CodeUri: s3://lambda-handlers-codes/84843d5f02fd4f931b720516375d8b75
+      CodeUri: s3://lambda-handlers-codes/84f5863c54c6332c36a211e071e49cf2
       MemorySize: 256
       Role:
         Fn::GetAtt:
@@ -173,7 +173,7 @@ Resources:
       FunctionName: ProcessImageLambda
       Handler: GetTextLambda::handleRequest
       Runtime: java11
-      CodeUri: s3://lambda-handlers-codes/84843d5f02fd4f931b720516375d8b75
+      CodeUri: s3://lambda-handlers-codes/84f5863c54c6332c36a211e071e49cf2
       MemorySize: 256
       Role:
         Fn::GetAtt:
@@ -214,6 +214,7 @@ Resources:
             Action:
             - s3:GetBucketNotification
             - s3:PutBucketNotification
+            - s3:GetObject
             Resource:
               Fn::Sub: arn:aws:s3:::images-s3
           - Effect: Allow

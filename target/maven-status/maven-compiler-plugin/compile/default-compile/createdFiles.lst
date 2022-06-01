@@ -4,4 +4,3 @@ GetTextLambda.class
 model\LambdaResponse.class
 model\Record.class
 AddLambdaHandler.class
-model\S3Event.class
