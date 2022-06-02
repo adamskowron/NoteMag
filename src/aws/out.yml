@@ -120,7 +120,7 @@ Resources:
       FunctionName: UploadLambda
       Handler: AddLambdaHandler::handleRequest
       Runtime: java11
-      CodeUri: s3://lambda-handlers-codes/84f5863c54c6332c36a211e071e49cf2
+      CodeUri: s3://lambda-handlers-codes/db8dc992fd2d1d8b9cbba59638685252
       MemorySize: 256
       Role:
         Fn::GetAtt:
@@ -173,13 +173,13 @@ Resources:
       FunctionName: ProcessImageLambda
       Handler: GetTextLambda::handleRequest
       Runtime: java11
-      CodeUri: s3://lambda-handlers-codes/84f5863c54c6332c36a211e071e49cf2
-      MemorySize: 256
+      CodeUri: s3://lambda-handlers-codes/db8dc992fd2d1d8b9cbba59638685252
+      MemorySize: 512
       Role:
         Fn::GetAtt:
         - ProcessImageLambdaIAMRole
         - Arn
-      Timeout: 60
+      Timeout: 120
   ProcessImageLambdaPermission:
     Type: AWS::Lambda::Permission
     Properties:
@@ -214,7 +214,6 @@ Resources:
             Action:
             - s3:GetBucketNotification
             - s3:PutBucketNotification
-            - s3:GetObject
             Resource:
               Fn::Sub: arn:aws:s3:::images-s3
           - Effect: Allow
@@ -241,6 +240,15 @@ Resources:
             - s3:DeleteObject
             Resource:
               Fn::Sub: arn:aws:s3:::images-s3/*
+      - PolicyName: allowPutToDynamo
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - dynamodb:Update*
+            - dynamodb:PutItem*
+            Resource: arn:aws:dynamodb:::table/ParsedImages
       - PolicyName: rekognitionText
         PolicyDocument:
           Version: '2012-10-17'
@@ -266,19 +274,16 @@ Resources:
   DDBTable:
     Type: AWS::DynamoDB::Table
     Properties:
+      TableName: ParsedImages
       AttributeDefinitions:
-      - AttributeName: UserId
+      - AttributeName: userId
         AttributeType: S
-      - AttributeName: ImageName
-        AttributeType: S
-      - AttributeName: S3Key
-        AttributeType: S
-      - AttributeName: Text
+      - AttributeName: imageName
         AttributeType: S
       KeySchema:
-      - AttributeName: UserId
+      - AttributeName: userId
         KeyType: HASH
-      - AttributeName: ImageName
+      - AttributeName: imageName
         KeyType: RANGE
       ProvisionedThroughput:
         ReadCapacityUnits: 5

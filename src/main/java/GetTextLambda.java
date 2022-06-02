@@ -1,3 +1,8 @@
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
+import com.amazonaws.services.dynamodbv2.document.DynamoDB;
+import com.amazonaws.services.dynamodbv2.document.Item;
+import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
@@ -7,20 +12,28 @@ import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import lombok.SneakyThrows;
+import model.ParsedImages;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.rekognition.RekognitionClient;
 import software.amazon.awssdk.services.rekognition.model.*;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
+
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class GetTextLambda implements RequestHandler<S3Event, String> {
+
+    private final String tableName = "ParsedImages";
 
     @SneakyThrows
     @Override
@@ -34,6 +47,11 @@ public class GetTextLambda implements RequestHandler<S3Event, String> {
         logger.log(event.getRecords().toString());
 
         logger.log("MAPPED REQUEST: " + event.toString());
+
+        String s3Key = event.getRecords().get(0).getS3().getObject().getKey();
+        String[] s3KeyComponents = s3Key.split("/");
+        String userName = s3KeyComponents[0];
+        String imageName = s3KeyComponents[1];
 
         S3Client s3Client = S3Client.builder().region(Region.EU_WEST_1)
                 .credentialsProvider(DefaultCredentialsProvider.create())
@@ -52,6 +70,8 @@ public class GetTextLambda implements RequestHandler<S3Event, String> {
                 .credentialsProvider(DefaultCredentialsProvider.create())
                 .build();
 
+        logger.log("created rekognition client");
+
         SdkBytes sourceBytes = SdkBytes.fromInputStream(image);
         Image souImage = Image.builder()
                 .bytes(sourceBytes)
@@ -64,13 +84,48 @@ public class GetTextLambda implements RequestHandler<S3Event, String> {
                 .map(TextDetection::detectedText)
                 .collect(Collectors.toList());
 
-        logger.log("Detected lines and words");
-        for (String text: detectedLines) {
-            logger.log(text);
+        if(detectedLines.isEmpty()) {
+            logger.log("No lines are parsed");
+            return "No lines parsed";
         }
 
-        logger.log("Saving to DynamoDb");
+        logger.log("Detected lines and words");
+        StringBuilder lines = new StringBuilder();
+        for (String text: detectedLines) {
+            lines.append(text);
+        }
+        logger.log(lines.toString());
 
-        return event.toString();
+        DynamoDbEnhancedClient dynamoDbEnhancedClient = DynamoDbEnhancedClient.builder()
+                .dynamoDbClient(DynamoDbClient.builder()
+                        .region(Region.EU_WEST_1)
+                        .credentialsProvider(DefaultCredentialsProvider.create())
+                        .build())
+                .build();
+
+        ParsedImages imageContent = ParsedImages.builder()
+                .userId(userName)
+                .imageName(imageName)
+                .lines(detectedLines)
+                .S3Key(s3Key)
+                .build();
+
+        AmazonDynamoDB client = AmazonDynamoDBClientBuilder.standard().build();
+        DynamoDB dynamoDB = new DynamoDB(client);
+
+        Table table = dynamoDB.getTable(tableName);
+
+        Item item = new Item()
+                .withPrimaryKey("userId", userName, "imageName", imageName)
+                .withList("translatedLines", detectedLines)
+                .withString("S3Key", s3Key);
+
+        logger.log("Saving to DynamoDb object: " + item.toJSON());
+
+        return table.putItem(item).toString();
+
+
+//zrobisz test 10 / 100 / 1000 jednoczesnych requestow i zrobisz wykres od sredniej szybkosci i wykres od dokladnosci tekstu
+        //JMETER?
     }
 }

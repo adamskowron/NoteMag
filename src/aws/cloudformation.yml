@@ -174,9 +174,9 @@ Resources:
       Handler: GetTextLambda::handleRequest
       Runtime: java11
       CodeUri: ../../target/notemag.zip
-      MemorySize: 256
+      MemorySize: 512
       Role: !GetAtt ProcessImageLambdaIAMRole.Arn
-      Timeout: 60
+      Timeout: 120
 
   ProcessImageLambdaPermission:
     Type: 'AWS::Lambda::Permission'
@@ -208,7 +208,6 @@ Resources:
                 Action:
                   - 's3:GetBucketNotification'
                   - 's3:PutBucketNotification'
-                  - 's3:GetObject'
                 Resource: !Sub 'arn:aws:s3:::images-s3'
               - Effect: Allow
                 Action:
@@ -233,6 +232,15 @@ Resources:
                   - s3:GetObject
                   - s3:DeleteObject
                 Resource:  !Sub 'arn:aws:s3:::images-s3/*'
+        - PolicyName: allowPutToDynamo
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'dynamodb:Update*'
+                  - 'dynamodb:PutItem*'
+                Resource: 'arn:aws:dynamodb:eu-west-1:462503996016:table/ParsedImages'
         - PolicyName: rekognitionText
           PolicyDocument:
             Version: '2012-10-17'
@@ -266,30 +274,24 @@ Resources:
   DDBTable:
     Type: AWS::DynamoDB::Table
     Properties:
+      TableName: "ParsedImages"
       AttributeDefinitions:
         -
-          AttributeName: "UserId"
+          AttributeName: "userId"
           AttributeType: "S"
         -
-          AttributeName: "ImageName"
-          AttributeType: "S"
-        -
-          AttributeName: "S3Key"
-          AttributeType: "S"
-        -
-          AttributeName: "Text"
+          AttributeName: "imageName"
           AttributeType: "S"
       KeySchema:
         -
-          AttributeName: "UserId"
+          AttributeName: "userId"
           KeyType: "HASH"
         -
-          AttributeName: "ImageName"
+          AttributeName: "imageName"
           KeyType: "RANGE"
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
-
 
 #  WriteCapacityScalableTarget:
 #    Type: AWS::ApplicationAutoScaling::ScalableTarget

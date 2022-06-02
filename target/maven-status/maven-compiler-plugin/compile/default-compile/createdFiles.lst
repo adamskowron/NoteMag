@@ -1,4 +1,6 @@
 model\LambdaResponse$LambdaResponseBuilder.class
+model\ParsedImages$ParsedImagesBuilder.class
+model\ParsedImages.class
 model\LambdaRequest.class
 GetTextLambda.class
 model\LambdaResponse.class
