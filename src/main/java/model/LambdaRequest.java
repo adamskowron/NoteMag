@@ -15,7 +15,7 @@ import java.util.*;
 @Setter
 @Jacksonized
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class LambdaRequest {
+public class LambdaRequest <T> {
 
     @JsonProperty
     private Map<String, ArrayList<String>> headers;
@@ -24,7 +24,7 @@ public class LambdaRequest {
     private boolean isBase64Encoded;
 
     @JsonProperty
-    private byte[] body;
+    private T body;
 
 //    @JsonProperty
 //    private List<String> requestContext;

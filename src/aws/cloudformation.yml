@@ -251,6 +251,60 @@ Resources:
                   - rekognition:GetTextDetection
                 Resource: '*'
 
+  ### GET IMAGE LAMBDA ###
+
+  GetLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: GetLambda
+      Handler: GetLambdaHandler::handleRequest
+      Runtime: java11
+      CodeUri: ../../target/notemag.zip
+      MemorySize: 256
+      Role: !GetAtt GetLambdaExecutionRole.Arn
+      Timeout: 60
+
+  GetLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: allowLogging
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:*
+                Resource: arn:aws:logs:*:*:*
+        - PolicyName: getAndDeleteObjects
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - '*'
+                Resource: arn:aws:s3:::images-s3/*
+        - PolicyName: allowReadActions
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'dynamodb:GetItem'
+                  - 'dynamodb:BatchGetItem'
+                  - 'dynamodb:Scan'
+                  - 'dynamodb:Query'
+                Resource: 'arn:aws:dynamodb:eu-west-1:462503996016:table/ParsedImages'
+
   ### S3 BUCKET FOR IMAGES STORING ###
 
   ImagesBucket:
@@ -263,11 +317,6 @@ Resources:
         LambdaConfigurations:
           - Event: s3:ObjectCreated:*
             Function: !GetAtt ProcessImageLambda.Arn
-#            Filter:
-#              S3Key:
-#                Rules:
-#                  - Name: suffix
-#                    Value: .txt
 
   ### DynamoDB ###
 

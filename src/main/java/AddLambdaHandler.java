@@ -1,26 +1,21 @@
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import model.LambdaRequest;
 import model.LambdaResponse;
-import reactor.core.publisher.Mono;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
-import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.http.HttpStatusCode;
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
 import java.io.*;
 import java.net.URLConnection;
-import java.util.Arrays;
-import java.util.concurrent.CompletableFuture;
 
 public class AddLambdaHandler implements RequestStreamHandler {
 
@@ -32,7 +27,7 @@ public class AddLambdaHandler implements RequestStreamHandler {
         mapper.enable(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT);
         mapper.enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY);
 
-        LambdaRequest lambdaRequest = mapper.readValue(inputStream, LambdaRequest.class); //readVal ???
+        LambdaRequest<byte[]> lambdaRequest = mapper.readValue(inputStream, new TypeReference<LambdaRequest<byte[]>>() {}); //readVal ???
 
         if(lambdaRequest.getHeaders().get("fileName").isEmpty() && lambdaRequest.getHeaders().get("fileName").size() > 1
         && lambdaRequest.getHeaders().get("userName").isEmpty() && lambdaRequest.getHeaders().get("userName").size() > 1) {
@@ -40,7 +35,7 @@ public class AddLambdaHandler implements RequestStreamHandler {
             OutputStreamWriter writer = new OutputStreamWriter(outputStream, "UTF-8");
             writer.write(mapper.writer().withDefaultPrettyPrinter().writeValueAsString(LambdaResponse.builder()
                     .statusCode(HttpStatusCode.BAD_REQUEST)
-                    .body("MISSING fileName or userName HEADER")
+                    .body("missing fileName or userName header")
                     .build()));
             writer.close();
             return;
@@ -62,7 +57,6 @@ public class AddLambdaHandler implements RequestStreamHandler {
 
             if(mimeType.toLowerCase().equals("image/jpeg") || mimeType.toLowerCase().equals("image/png"))
             {
-                String contentType = mimeType.toLowerCase();
                 logger.log("REQUEST VALID");
                 logger.log("GOT IMAGE: " + lambdaRequest.getBody().toString());
 
@@ -72,7 +66,7 @@ public class AddLambdaHandler implements RequestStreamHandler {
 
                 PutObjectResponse putObjectResponse = s3Client.putObject(PutObjectRequest.builder()
                                 .bucket("images-s3")
-                                .contentType(mimeType)
+                                .contentType(mimeType.toLowerCase())
                                 .key(userName + "/" + fileName).build(),
                         RequestBody.fromBytes(lambdaRequest.getBody()));
 

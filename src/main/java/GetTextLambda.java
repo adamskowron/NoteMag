@@ -103,13 +103,6 @@ public class GetTextLambda implements RequestHandler<S3Event, String> {
                         .build())
                 .build();
 
-        ParsedImages imageContent = ParsedImages.builder()
-                .userId(userName)
-                .imageName(imageName)
-                .lines(detectedLines)
-                .S3Key(s3Key)
-                .build();
-
         AmazonDynamoDB client = AmazonDynamoDBClientBuilder.standard().build();
         DynamoDB dynamoDB = new DynamoDB(client);
 

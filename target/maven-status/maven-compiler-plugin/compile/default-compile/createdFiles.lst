@@ -1,7 +1,9 @@
 model\LambdaResponse$LambdaResponseBuilder.class
 model\ParsedImages$ParsedImagesBuilder.class
 model\ParsedImages.class
+AddLambdaHandler$1.class
 model\LambdaRequest.class
+GetLambda.class
 GetTextLambda.class
 model\LambdaResponse.class
 model\Record.class
