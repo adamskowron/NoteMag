@@ -50,7 +50,7 @@ Resources:
       PathPart: 'lambda'
       RestApiId: !Ref ApiGatewayRestApi
 
-  ApiGatewayMethodGetter:
+  ApiGatewayMethodUpload:
     Type: AWS::ApiGateway::Method
     Properties:
       ApiKeyRequired: false
@@ -64,6 +64,42 @@ Resources:
         TimeoutInMillis: 29000
         Type: AWS_PROXY
         Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UploadLambda.Arn}/invocations'
+      OperationName: 'lambda'
+      ResourceId: !Ref ApiGatewayResource
+      RestApiId: !Ref ApiGatewayRestApi
+
+  ApiGatewayMethodGet:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: GET
+      Integration:
+        ConnectionType: INTERNET
+        Credentials: !GetAtt ApiGatewayIamRole.Arn
+        IntegrationHttpMethod: POST
+        PassthroughBehavior: WHEN_NO_MATCH
+        TimeoutInMillis: 29000
+        Type: AWS_PROXY
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetLambda.Arn}/invocations'
+      OperationName: 'lambda'
+      ResourceId: !Ref ApiGatewayResource
+      RestApiId: !Ref ApiGatewayRestApi
+
+  ApiGatewayMethodDelete:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: DELETE
+      Integration:
+        ConnectionType: INTERNET
+        Credentials: !GetAtt ApiGatewayIamRole.Arn
+        IntegrationHttpMethod: POST
+        PassthroughBehavior: WHEN_NO_MATCH
+        TimeoutInMillis: 29000
+        Type: AWS_PROXY
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteLambda.Arn}/invocations'
       OperationName: 'lambda'
       ResourceId: !Ref ApiGatewayResource
       RestApiId: !Ref ApiGatewayRestApi
@@ -85,7 +121,7 @@ Resources:
 
   ApiGatewayDeployment:
     Type: AWS::ApiGateway::Deployment
-    DependsOn: ApiGatewayMethodGetter
+    DependsOn: [ApiGatewayMethodUpload, ApiGatewayMethodGet, ApiGatewayMethodDelete]
     Properties:
       Description: Lambda API Deployment
       RestApiId: !Ref ApiGatewayRestApi
@@ -111,7 +147,7 @@ Resources:
             Statement:
               - Effect: 'Allow'
                 Action: 'lambda:*'
-                Resource: !GetAtt UploadLambda.Arn
+                Resource: '*'
 
   ### UPLOAD IMAGES LAMBDA ###
 
@@ -119,7 +155,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: UploadLambda
-      Handler: AddLambdaHandler::handleRequest
+      Handler: UploadLambda::handleRequest
       Runtime: java11
       CodeUri: ../../target/notemag.zip
       MemorySize: 256
@@ -171,7 +207,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: ProcessImageLambda
-      Handler: GetTextLambda::handleRequest
+      Handler: ProcessLambda::handleRequest
       Runtime: java11
       CodeUri: ../../target/notemag.zip
       MemorySize: 512
@@ -257,7 +293,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: GetLambda
-      Handler: GetLambdaHandler::handleRequest
+      Handler: GetLambda::handleRequest
       Runtime: java11
       CodeUri: ../../target/notemag.zip
       MemorySize: 256
@@ -303,6 +339,57 @@ Resources:
                   - 'dynamodb:BatchGetItem'
                   - 'dynamodb:Scan'
                   - 'dynamodb:Query'
+                Resource: 'arn:aws:dynamodb:eu-west-1:462503996016:table/ParsedImages'
+
+  ### GET IMAGE LAMBDA ###
+
+  DeleteLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: DeleteLambda
+      Handler: DeleteLambda::handleRequest
+      Runtime: java11
+      CodeUri: ../../target/notemag.zip
+      MemorySize: 256
+      Role: !GetAtt DeleteLambdaExecutionRole.Arn
+      Timeout: 60
+
+  DeleteLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: allowLogging
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:*
+                Resource: arn:aws:logs:*:*:*
+        - PolicyName: getAndDeleteObjects
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - '*'
+                Resource: arn:aws:s3:::images-s3/*
+        - PolicyName: allowDeleteActions
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'dynamodb:DeleteItem'
                 Resource: 'arn:aws:dynamodb:eu-west-1:462503996016:table/ParsedImages'
 
   ### S3 BUCKET FOR IMAGES STORING ###
