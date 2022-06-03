@@ -2,30 +2,6 @@ AWSTemplateFormatVersion: 2010-09-09
 Transform: AWS::Serverless-2016-10-31
 Description: Notemag AWS cloudformation infrastructure definition
 
-Parameters:
-  apiGatewayName:
-    Type: String
-    Default: notemag-api
-  apiGatewayStageName:
-    Type: String
-    AllowedPattern: "[a-z0-9]+"
-    Default: beta
-#  apiGatewayHTTPMethod:
-#    Type: String
-#    Default: POST
-  addLambdaFunctionName:
-    Type: String
-    AllowedPattern: "[a-zA-Z0-9]+[a-zA-Z0-9-]+[a-zA-Z0-9]+"
-    Default: UploadLambda
-  getLambdaFunctionName:
-    Type: String
-    AllowedPattern: "[a-zA-Z0-9]+[a-zA-Z0-9-]+[a-zA-Z0-9]+"
-    Default: getNotesLambda
-  deleteLambdaFunctionName:
-    Type: String
-    AllowedPattern: "[a-zA-Z0-9]+[a-zA-Z0-9-]+[a-zA-Z0-9]+"
-    Default: deleteNoteLambda
-
 Resources:
 
   ### API GATEWAY ###
@@ -429,60 +405,59 @@ Resources:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
 
-#  WriteCapacityScalableTarget:
-#    Type: AWS::ApplicationAutoScaling::ScalableTarget
-#    Properties:
-#      MaxCapacity: 15
-#      MinCapacity: 5
-#      ResourceId: !Join
-#        - /
-#        - - table
-#          - !Ref DDBTable
-#      RoleARN: !GetAtt ScalingRole.Arn
-#      ScalableDimension: dynamodb:table:WriteCapacityUnits
-#      ServiceNamespace: dynamodb
-#  ScalingRole:
-#    Type: AWS::IAM::Role
-#    Properties:
-#      AssumeRolePolicyDocument:
-#        Version: "2012-10-17"
-#        Statement:
-#          -
-#            Effect: "Allow"
-#            Principal:
-#              Service:
-#                - application-autoscaling.amazonaws.com
-#            Action:
-#              - "sts:AssumeRole"
-#      Path: "/"
-#      Policies:
-#        -
-#          PolicyName: "root"
-#          PolicyDocument:
-#            Version: "2012-10-17"
-#            Statement:
-#              -
-#                Effect: "Allow"
-#                Action:
-#                  - "dynamodb:DescribeTable"
-#                  - "dynamodb:UpdateTable"
-#                  - "cloudwatch:PutMetricAlarm"
-#                  - "cloudwatch:DescribeAlarms"
-#                  - "cloudwatch:GetMetricStatistics"
-#                  - "cloudwatch:SetAlarmState"
-#                  - "cloudwatch:DeleteAlarms"
-#                Resource: "*"
-#
-#
-#  WriteScalingPolicy:
-#    Type: AWS::ApplicationAutoScaling::ScalingPolicy
-#    Properties:
-#      PolicyName: WriteAutoScalingPolicy
-#      PolicyType: TargetTrackingScaling
-#      ScalingTargetId: !Ref WriteCapacityScalableTarget
-#      TargetTrackingScalingPolicyConfiguration:
-#        TargetValue: 50.0
-#        ScaleInCooldown: 60
-#        ScaleOutCooldown: 60
-#        PredefinedMetricSpecification:
-#          PredefinedMetricType: DynamoDBWriteCapacityUtilization
+  WriteCapacityScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: 15
+      MinCapacity: 5
+      ResourceId: !Join
+        - /
+        - - table
+          - !Ref DDBTable
+      RoleARN: !GetAtt ScalingRole.Arn
+      ScalableDimension: dynamodb:table:WriteCapacityUnits
+      ServiceNamespace: dynamodb
+  ScalingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - application-autoscaling.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "dynamodb:DescribeTable"
+                  - "dynamodb:UpdateTable"
+                  - "cloudwatch:PutMetricAlarm"
+                  - "cloudwatch:DescribeAlarms"
+                  - "cloudwatch:GetMetricStatistics"
+                  - "cloudwatch:SetAlarmState"
+                  - "cloudwatch:DeleteAlarms"
+                Resource: "*"
+
+  WriteScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: WriteAutoScalingPolicy
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref WriteCapacityScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        TargetValue: 50.0
+        ScaleInCooldown: 60
+        ScaleOutCooldown: 60
+        PredefinedMetricSpecification:
+          PredefinedMetricType: DynamoDBWriteCapacityUtilization
