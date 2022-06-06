@@ -97,16 +97,11 @@ public class ProcessLambda implements RequestHandler<S3Event, String> {
         Table table = dynamoDB.getTable(Properties.tableName);
         Item item = new Item()
                 .withPrimaryKey("userId", userName, "imageName", imageName)
-             //   .withString(LocalDate.now())
                 .withList("translatedLines", detectedLines)
                 .withString("S3Key", s3Key);
 
         logger.log("Saving to DynamoDb object: " + item.toJSON());
 
         return table.putItem(item).toString();
-
-
-//zrobisz test 10 / 100 / 1000 jednoczesnych requestow i zrobisz wykres od sredniej szybkosci i wykres od dokladnosci tekstu
-        //JMETER?
     }
 }

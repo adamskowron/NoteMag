@@ -4,8 +4,10 @@ config\Properties.class
 ProcessLambda.class
 GetLambda.class
 UploadLambda.class
+GetAllLambda.class
 model\LambdaResponse$LambdaResponseBuilder.class
 model\ParsedImages.class
+GetImageLambda.class
 model\LambdaRequest.class
 model\LambdaResponse.class
 DeleteLambda.class

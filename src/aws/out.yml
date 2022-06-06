@@ -1,26 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 Transform: AWS::Serverless-2016-10-31
 Description: Notemag AWS cloudformation infrastructure definition
-Parameters:
-  apiGatewayName:
-    Type: String
-    Default: notemag-api
-  apiGatewayStageName:
-    Type: String
-    AllowedPattern: '[a-z0-9]+'
-    Default: beta
-  addLambdaFunctionName:
-    Type: String
-    AllowedPattern: '[a-zA-Z0-9]+[a-zA-Z0-9-]+[a-zA-Z0-9]+'
-    Default: UploadLambda
-  getLambdaFunctionName:
-    Type: String
-    AllowedPattern: '[a-zA-Z0-9]+[a-zA-Z0-9-]+[a-zA-Z0-9]+'
-    Default: getNotesLambda
-  deleteLambdaFunctionName:
-    Type: String
-    AllowedPattern: '[a-zA-Z0-9]+[a-zA-Z0-9-]+[a-zA-Z0-9]+'
-    Default: deleteNoteLambda
 Resources:
   ApiGatewayRestApi:
     Type: AWS::ApiGateway::RestApi
@@ -33,14 +13,24 @@ Resources:
         Types:
         - EDGE
       Name: lambda-api
-  ApiGatewayResource:
+  ApiGatewayResourceImage:
     Type: AWS::ApiGateway::Resource
     Properties:
       ParentId:
         Fn::GetAtt:
         - ApiGatewayRestApi
         - RootResourceId
-      PathPart: lambda
+      PathPart: image
+      RestApiId:
+        Ref: ApiGatewayRestApi
+  ApiGatewayResourceNote:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId:
+        Fn::GetAtt:
+        - ApiGatewayRestApi
+        - RootResourceId
+      PathPart: note
       RestApiId:
         Ref: ApiGatewayRestApi
   ApiGatewayMethodUpload:
@@ -63,10 +53,10 @@ Resources:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UploadLambda.Arn}/invocations
       OperationName: lambda
       ResourceId:
-        Ref: ApiGatewayResource
+        Ref: ApiGatewayResourceImage
       RestApiId:
         Ref: ApiGatewayRestApi
-  ApiGatewayMethodGet:
+  ApiGatewayMethodGetNoteByKey:
     Type: AWS::ApiGateway::Method
     Properties:
       ApiKeyRequired: false
@@ -86,7 +76,55 @@ Resources:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetLambda.Arn}/invocations
       OperationName: lambda
       ResourceId:
-        Ref: ApiGatewayResource
+        Ref: ApiGatewayResourceNote
+      RestApiId:
+        Ref: ApiGatewayRestApi
+  ApiGatewayMethodGetImageByKey:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: GET
+      Integration:
+        ConnectionType: INTERNET
+        Credentials:
+          Fn::GetAtt:
+          - ApiGatewayIamRole
+          - Arn
+        IntegrationHttpMethod: POST
+        PassthroughBehavior: WHEN_NO_MATCH
+        TimeoutInMillis: 29000
+        Type: AWS_PROXY
+        Uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetImageLambda.Arn}/invocations
+      OperationName: lambda
+      ResourceId:
+        Ref: ApiGatewayResourceImage
+      RestApiId:
+        Ref: ApiGatewayRestApi
+  ApiGatewayMethodGetAll:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: GET
+      Integration:
+        ConnectionType: INTERNET
+        Credentials:
+          Fn::GetAtt:
+          - ApiGatewayIamRole
+          - Arn
+        IntegrationHttpMethod: POST
+        PassthroughBehavior: WHEN_NO_MATCH
+        TimeoutInMillis: 29000
+        Type: AWS_PROXY
+        Uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetAllLambda.Arn}/invocations
+      OperationName: lambda
+      ResourceId:
+        Fn::GetAtt:
+        - ApiGatewayRestApi
+        - RootResourceId
       RestApiId:
         Ref: ApiGatewayRestApi
   ApiGatewayMethodDelete:
@@ -109,7 +147,7 @@ Resources:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteLambda.Arn}/invocations
       OperationName: lambda
       ResourceId:
-        Ref: ApiGatewayResource
+        Ref: ApiGatewayResourceNote
       RestApiId:
         Ref: ApiGatewayRestApi
   ApiGatewayModel:
@@ -124,15 +162,17 @@ Resources:
     Properties:
       DeploymentId:
         Ref: ApiGatewayDeployment
-      Description: Lambda API Stage v0
+      Description: NoteMag API Stage v1
       RestApiId:
         Ref: ApiGatewayRestApi
-      StageName: v0
+      StageName: v1
   ApiGatewayDeployment:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
     - ApiGatewayMethodUpload
-    - ApiGatewayMethodGet
+    - ApiGatewayMethodGetNoteByKey
+    - ApiGatewayMethodGetAll
+    - ApiGatewayMethodGetImageByKey
     - ApiGatewayMethodDelete
     Properties:
       Description: Lambda API Deployment
@@ -166,7 +206,7 @@ Resources:
       FunctionName: UploadLambda
       Handler: UploadLambda::handleRequest
       Runtime: java11
-      CodeUri: s3://lambda-handlers-codes/8611c2569ee98c5c72d90c4d7b6228d7
+      CodeUri: s3://lambda-handlers-codes/37eceed48fe7a03ab876f36965c6d205
       MemorySize: 256
       Role:
         Fn::GetAtt:
@@ -219,7 +259,7 @@ Resources:
       FunctionName: ProcessImageLambda
       Handler: ProcessLambda::handleRequest
       Runtime: java11
-      CodeUri: s3://lambda-handlers-codes/8611c2569ee98c5c72d90c4d7b6228d7
+      CodeUri: s3://lambda-handlers-codes/37eceed48fe7a03ab876f36965c6d205
       MemorySize: 512
       Role:
         Fn::GetAtt:
@@ -310,7 +350,7 @@ Resources:
       FunctionName: GetLambda
       Handler: GetLambda::handleRequest
       Runtime: java11
-      CodeUri: s3://lambda-handlers-codes/8611c2569ee98c5c72d90c4d7b6228d7
+      CodeUri: s3://lambda-handlers-codes/37eceed48fe7a03ab876f36965c6d205
       MemorySize: 256
       Role:
         Fn::GetAtt:
@@ -357,13 +397,100 @@ Resources:
             - dynamodb:Scan
             - dynamodb:Query
             Resource: arn:aws:dynamodb:eu-west-1:462503996016:table/ParsedImages
+  GetImageLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: GetImageLambda
+      Handler: GetImageLambda::handleRequest
+      Runtime: java11
+      CodeUri: s3://lambda-handlers-codes/37eceed48fe7a03ab876f36965c6d205
+      MemorySize: 256
+      Role:
+        Fn::GetAtt:
+        - GetImageLambdaExecutionRole
+        - Arn
+      Timeout: 60
+  GetImageLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Policies:
+      - PolicyName: allowLogging
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:*
+            Resource: arn:aws:logs:*:*:*
+      - PolicyName: getAndDeleteObjects
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - '*'
+            Resource: arn:aws:s3:::images-s3/*
+  GetAllLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: GetAllLambda
+      Handler: GetAllLambda::handleRequest
+      Runtime: java11
+      CodeUri: s3://lambda-handlers-codes/37eceed48fe7a03ab876f36965c6d205
+      MemorySize: 256
+      Role:
+        Fn::GetAtt:
+        - GetAllLambdaExecutionRole
+        - Arn
+      Timeout: 60
+  GetAllLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Policies:
+      - PolicyName: allowLogging
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:*
+            Resource: arn:aws:logs:*:*:*
+      - PolicyName: allowReadActions
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - dynamodb:GetItem
+            - dynamodb:BatchGetItem
+            - dynamodb:Scan
+            - dynamodb:Query
+            Resource: arn:aws:dynamodb:eu-west-1:462503996016:table/ParsedImages
   DeleteLambda:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: DeleteLambda
       Handler: DeleteLambda::handleRequest
       Runtime: java11
-      CodeUri: s3://lambda-handlers-codes/8611c2569ee98c5c72d90c4d7b6228d7
+      CodeUri: s3://lambda-handlers-codes/37eceed48fe7a03ab876f36965c6d205
       MemorySize: 256
       Role:
         Fn::GetAtt:
@@ -437,3 +564,60 @@ Resources:
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
+  WriteCapacityScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: 20
+      MinCapacity: 5
+      ResourceId:
+        Fn::Join:
+        - /
+        - - table
+          - Ref: DDBTable
+      RoleARN:
+        Fn::GetAtt:
+        - ScalingRole
+        - Arn
+      ScalableDimension: dynamodb:table:WriteCapacityUnits
+      ServiceNamespace: dynamodb
+  ScalingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - application-autoscaling.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - dynamodb:DescribeTable
+            - dynamodb:UpdateTable
+            - cloudwatch:PutMetricAlarm
+            - cloudwatch:DescribeAlarms
+            - cloudwatch:GetMetricStatistics
+            - cloudwatch:SetAlarmState
+            - cloudwatch:DeleteAlarms
+            Resource: '*'
+  WriteScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: ReadAutoScalingPolicy
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId:
+        Ref: WriteCapacityScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        TargetValue: 50.0
+        ScaleInCooldown: 60
+        ScaleOutCooldown: 60
+        PredefinedMetricSpecification:
+          PredefinedMetricType: DynamoDBWriteCapacityUtilization

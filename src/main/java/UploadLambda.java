@@ -45,10 +45,24 @@ public class UploadLambda implements RequestStreamHandler {
         if(fileName == null || userName == null) {
             logger.log("MISSING fileName path variable");
             OutputStreamWriter writer = new OutputStreamWriter(outputStream, "UTF-8");
-            writer.write(mapper.writer().withDefaultPrettyPrinter().writeValueAsString(LambdaResponse.builder()
+            writer.write(mapper.writer().withDefaultPrettyPrinter().writeValueAsString(
+                    LambdaResponse.builder()
                     .statusCode(HttpStatusCode.BAD_REQUEST)
                     .body("missing fileName or userName path variable")
                     .build()));
+            writer.close();
+            return;
+        }
+
+        double imageSizeKB = lambdaRequest.getBody().length / 1024;
+        if(imageSizeKB > 2000.0d) {
+            logger.log("Uploaded image exceeds 2 MB");
+            OutputStreamWriter writer = new OutputStreamWriter(outputStream, "UTF-8");
+            writer.write(mapper.writer().withDefaultPrettyPrinter().writeValueAsString(
+                    LambdaResponse.builder()
+                            .statusCode(HttpStatusCode.BAD_REQUEST)
+                            .body("Uploaded image exceeds 2 MB")
+                            .build()));
             writer.close();
             return;
         }
