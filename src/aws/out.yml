@@ -206,7 +206,7 @@ Resources:
       FunctionName: UploadLambda
       Handler: UploadLambda::handleRequest
       Runtime: java11
-      CodeUri: s3://lambda-handlers-codes/37eceed48fe7a03ab876f36965c6d205
+      CodeUri: s3://lambda-handlers-codes/acbc0bf196b734d9bf5ce33e9fd28141
       MemorySize: 256
       Role:
         Fn::GetAtt:
@@ -259,7 +259,7 @@ Resources:
       FunctionName: ProcessImageLambda
       Handler: ProcessLambda::handleRequest
       Runtime: java11
-      CodeUri: s3://lambda-handlers-codes/37eceed48fe7a03ab876f36965c6d205
+      CodeUri: s3://lambda-handlers-codes/acbc0bf196b734d9bf5ce33e9fd28141
       MemorySize: 512
       Role:
         Fn::GetAtt:
@@ -350,7 +350,7 @@ Resources:
       FunctionName: GetLambda
       Handler: GetLambda::handleRequest
       Runtime: java11
-      CodeUri: s3://lambda-handlers-codes/37eceed48fe7a03ab876f36965c6d205
+      CodeUri: s3://lambda-handlers-codes/acbc0bf196b734d9bf5ce33e9fd28141
       MemorySize: 256
       Role:
         Fn::GetAtt:
@@ -403,7 +403,7 @@ Resources:
       FunctionName: GetImageLambda
       Handler: GetImageLambda::handleRequest
       Runtime: java11
-      CodeUri: s3://lambda-handlers-codes/37eceed48fe7a03ab876f36965c6d205
+      CodeUri: s3://lambda-handlers-codes/acbc0bf196b734d9bf5ce33e9fd28141
       MemorySize: 256
       Role:
         Fn::GetAtt:
@@ -445,7 +445,7 @@ Resources:
       FunctionName: GetAllLambda
       Handler: GetAllLambda::handleRequest
       Runtime: java11
-      CodeUri: s3://lambda-handlers-codes/37eceed48fe7a03ab876f36965c6d205
+      CodeUri: s3://lambda-handlers-codes/acbc0bf196b734d9bf5ce33e9fd28141
       MemorySize: 256
       Role:
         Fn::GetAtt:
@@ -490,7 +490,7 @@ Resources:
       FunctionName: DeleteLambda
       Handler: DeleteLambda::handleRequest
       Runtime: java11
-      CodeUri: s3://lambda-handlers-codes/37eceed48fe7a03ab876f36965c6d205
+      CodeUri: s3://lambda-handlers-codes/acbc0bf196b734d9bf5ce33e9fd28141
       MemorySize: 256
       Role:
         Fn::GetAtt:
@@ -562,13 +562,13 @@ Resources:
       - AttributeName: imageName
         KeyType: RANGE
       ProvisionedThroughput:
-        ReadCapacityUnits: 5
-        WriteCapacityUnits: 5
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
   WriteCapacityScalableTarget:
     Type: AWS::ApplicationAutoScaling::ScalableTarget
     Properties:
       MaxCapacity: 20
-      MinCapacity: 5
+      MinCapacity: 1
       ResourceId:
         Fn::Join:
         - /
@@ -580,6 +580,48 @@ Resources:
         - Arn
       ScalableDimension: dynamodb:table:WriteCapacityUnits
       ServiceNamespace: dynamodb
+  ReadCapacityScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: 20
+      MinCapacity: 1
+      ResourceId:
+        Fn::Join:
+        - /
+        - - table
+          - Ref: DDBTable
+      RoleARN:
+        Fn::GetAtt:
+        - ScalingRole
+        - Arn
+      ScalableDimension: dynamodb:table:ReadCapacityUnits
+      ServiceNamespace: dynamodb
+  ReadScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: ReadAutoScalingPolicy
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId:
+        Ref: ReadCapacityScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        TargetValue: 50.0
+        ScaleInCooldown: 60
+        ScaleOutCooldown: 60
+        PredefinedMetricSpecification:
+          PredefinedMetricType: DynamoDBReadCapacityUtilization
+  WriteScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: ReadAutoScalingPolicy
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId:
+        Ref: WriteCapacityScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        TargetValue: 50.0
+        ScaleInCooldown: 60
+        ScaleOutCooldown: 60
+        PredefinedMetricSpecification:
+          PredefinedMetricType: DynamoDBWriteCapacityUtilization
   ScalingRole:
     Type: AWS::IAM::Role
     Properties:
@@ -608,16 +650,3 @@ Resources:
             - cloudwatch:SetAlarmState
             - cloudwatch:DeleteAlarms
             Resource: '*'
-  WriteScalingPolicy:
-    Type: AWS::ApplicationAutoScaling::ScalingPolicy
-    Properties:
-      PolicyName: ReadAutoScalingPolicy
-      PolicyType: TargetTrackingScaling
-      ScalingTargetId:
-        Ref: WriteCapacityScalableTarget
-      TargetTrackingScalingPolicyConfiguration:
-        TargetValue: 50.0
-        ScaleInCooldown: 60
-        ScaleOutCooldown: 60
-        PredefinedMetricSpecification:
-          PredefinedMetricType: DynamoDBWriteCapacityUtilization

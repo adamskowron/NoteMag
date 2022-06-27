@@ -13,10 +13,9 @@ Resources:
       BinaryMediaTypes:
         - '*/*'
       Description: An API Gateway with a Lambda Integration
-
       EndpointConfiguration:
         Types:
-          - EDGE #REGIONAL
+          - EDGE
       Name: lambda-api
 
   ApiGatewayResourceImage:
@@ -534,14 +533,14 @@ Resources:
           AttributeName: "imageName"
           KeyType: "RANGE"
       ProvisionedThroughput:
-        ReadCapacityUnits: 5
-        WriteCapacityUnits: 5
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
 
   WriteCapacityScalableTarget:
     Type: AWS::ApplicationAutoScaling::ScalableTarget
     Properties:
       MaxCapacity: 20
-      MinCapacity: 5
+      MinCapacity: 1
       ResourceId: !Join
         - /
         - - table
@@ -554,7 +553,7 @@ Resources:
     Type: AWS::ApplicationAutoScaling::ScalableTarget
     Properties:
       MaxCapacity: 20
-      MinCapacity: 5
+      MinCapacity: 1
       ResourceId: !Join
         - /
         - - table
